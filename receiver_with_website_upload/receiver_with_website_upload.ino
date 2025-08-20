@@ -20,7 +20,7 @@ const char* ssid = "Test123";
 const char* password = "Welcome@01";
 
 // --- Endpoint URL ---
-const String postURL = "http://192.168.1.10:8080/api/tank/reading";
+const String postURL = "http://nirman-aura.mysocietyhub.in/api/tank/reading";
 
 void setup() {
   Serial.begin(9600);
