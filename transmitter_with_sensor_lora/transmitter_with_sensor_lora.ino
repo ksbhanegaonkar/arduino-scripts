@@ -47,16 +47,16 @@ int getDistance() {
 }
 
 int getCleanAverage() {
-  int readings[10];
+  int readings[20];
   int validCount = 0;
 
-  // Collect 10 readings
-  for (int i = 0; i < 10; i++) {
+  // Collect 20 readings
+  for (int i = 0; i < 20; i++) {
     int d = getDistance();
     if (d > 0) {
       readings[validCount++] = d;
     }
-    delay(50);
+    delay(1000);
   }
 
   if (validCount == 0) return -1;
@@ -85,24 +85,26 @@ int getCleanAverage() {
 }
 
 void loop() {
-  int cleanAvg = getCleanAverage();
 
-  if (cleanAvg == -1) {
-    Serial.println("No consistent readings found.");
-  } else {
-    // Print locally
-    Serial.print("Filtered Distance: ");
-    Serial.print(cleanAvg);
-    Serial.println(" cm");
 
-    delay(5000);
-    // Send via LoRa
-    LoRa.beginPacket();
-    LoRa.print("Distance: ");
-    LoRa.print(cleanAvg);
-    LoRa.println(" cm");
-    LoRa.endPacket();
-  }
+  int cleanAvg = 0;
+
+  do{
+    cleanAvg = getCleanAverage();
+  }while(cleanAvg == -1);
+
+  // Print locally
+  Serial.print("Filtered Distance: ");
+  Serial.print(cleanAvg);
+  Serial.println(" cm");
+
+  delay(5000);
+  // Send via LoRa
+  LoRa.beginPacket();
+  LoRa.print("Distance: ");
+  LoRa.print(cleanAvg);
+  LoRa.println(" cm");
+  LoRa.endPacket();
 
   delay(1800000);  
 }
