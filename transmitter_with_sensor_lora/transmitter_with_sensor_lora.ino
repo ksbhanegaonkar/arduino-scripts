@@ -31,7 +31,7 @@ void setup() {
   Serial.println("Setup done, starting to send distance data...");
 }
 
-void loop() {
+int getDistance() {
   // Send ultrasonic pulse
   digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
@@ -41,20 +41,68 @@ void loop() {
   digitalWrite(TRIG_PIN, LOW);
 
   // Measure echo
-  duration = pulseIn(ECHO_PIN, HIGH);
-  distance = duration * 0.034 / 2;  // cm
+  duration = pulseIn(ECHO_PIN, HIGH, 30000); // 30ms timeout
+  if (duration == 0) return -1; // invalid reading
+  return duration * 0.034 / 2;  // cm
+}
 
-  // Print locally
-  Serial.print("Distance: ");
-  Serial.print(distance);
-  Serial.println(" cm");
+int getCleanAverage() {
+  int readings[10];
+  int validCount = 0;
 
-  // Send via LoRa
-  LoRa.beginPacket();
-  LoRa.print("Distance: ");
-  LoRa.print(distance);
-  LoRa.println(" cm");
-  LoRa.endPacket();
+  // Collect 10 readings
+  for (int i = 0; i < 10; i++) {
+    int d = getDistance();
+    if (d > 0) {
+      readings[validCount++] = d;
+    }
+    delay(50);
+  }
 
-  delay(600000);  
+  if (validCount == 0) return -1;
+
+  // Step 1: Calculate initial average
+  long sum = 0;
+  for (int i = 0; i < validCount; i++) {
+    sum += readings[i];
+  }
+  float avg = (float)sum / validCount;
+
+  // Step 2: Discard readings too far from average (±5 cm)
+  sum = 0;
+  int goodCount = 0;
+  for (int i = 0; i < validCount; i++) {
+    if (abs(readings[i] - avg) <= 5) {
+      sum += readings[i];
+      goodCount++;
+    }
+  }
+
+  if (goodCount == 0) return -1;
+
+  // Step 3: Return refined average
+  return sum / goodCount;
+}
+
+void loop() {
+  int cleanAvg = getCleanAverage();
+
+  if (cleanAvg == -1) {
+    Serial.println("No consistent readings found.");
+  } else {
+    // Print locally
+    Serial.print("Filtered Distance: ");
+    Serial.print(cleanAvg);
+    Serial.println(" cm");
+
+    delay(5000);
+    // Send via LoRa
+    LoRa.beginPacket();
+    LoRa.print("Distance: ");
+    LoRa.print(cleanAvg);
+    LoRa.println(" cm");
+    LoRa.endPacket();
+  }
+
+  delay(1800000);  
 }
